@@ -35,18 +35,28 @@ defmodule BraceServer do
   end
 
   defp serve(socket) do
-    socket |> read_line() |> write_line(socket)
+    message =
+      case read_line(socket) do
+        {:ok, line} ->
+          BraceServer.Command.parse(line)
+          |> BraceServer.Command.run()
+        {:error, _} = err ->
+          err
+      end
+    write_line(socket, message)
 
     serve(socket)
   end
 
   defp read_line(socket) do
     {:ok, data} = :gen_tcp.recv(socket, 0)
-    data
   end
 
-  defp write_line(line, socket) do
-    :gen_tcp.send(socket, line)
+  defp write_line(socket, message) do
+    :gen_tcp.send(socket, format_message(message))
   end
+
+  defp format_message({:ok, message}), do: message
+  defp format_message({:error, _}), do: "ERROR\r\n"
 
 end
